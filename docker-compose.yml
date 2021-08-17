@@ -1,0 +1,81 @@
+version: 0.1.0
+name: westWing
+description:
+
+ 
+---
+version: "3.7"
+services:
+  mysql:
+    image: percona/percona-server:8.0
+    container_name: percona
+    environment:
+      MYSQL_ROOT_PASSWORD: ${mysql.env.rootpass}
+      MYSQL_DATABASE: ${mysql.env.database}
+      MYSQL_USER: ${mysql.env.user}
+      MYSQL_PASSWORD: ${mysql.env.userpass}
+    restart: always
+    networks:
+      - backend
+    volumes:
+      - db_data:/var/lib/mysql
+ 
+  spring1:
+    depends_on:
+      - mysql
+    build:
+      context: ./spring3hibernate/
+      dockerfile: Dockerfile
+    container_name: springapp1
+    restart: always
+    networks:
+      - backend
+      - frontend
+ 
+  spring2:
+    depends_on:
+      - mysql
+    build:
+      context: ./spring3hibernate/
+      dockerfile: Dockerfile
+    container_name: springapp2
+    restart: always
+    networks:
+      - backend
+      - frontend
+    x-enabled: ${spring.app2}
+ 
+  nginx:
+    depends_on:
+      - spring1
+    image: nginx:alpine
+    container_name: proxy
+    restart: always
+    networks:
+      - frontend
+    volumes:
+      - ${nginx.conf}:/etc/nginx/conf.d
+    ports:
+      - ${nginx.port}:80
+    x-enabled: ${nginx.status}
+ 
+networks:
+  frontend:
+  backend:
+ 
+volumes:
+  db_data:
+ 
+---
+mysql:
+  env:
+    rootpass: password
+    database: employeedb
+    user: admin
+    userpass: password
+nginx:
+  conf: /home/ubuntu/dockerApp/spring3hibernate/nginx/conf/qa
+  port: 81
+  status: true
+spring:
+  app2: false
